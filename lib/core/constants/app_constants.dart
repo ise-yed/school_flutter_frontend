@@ -11,7 +11,7 @@ class AppConstants {
 
   // شبیه‌ساز اندروید: 10.0.2.2
   // محیط لوکال وب/دسکتاپ: 127.0.0.1
-  static const appBaseUrl = 'http://192.168.43.153:8000/api/v1/';
+  static const appBaseUrl = 'http://192.168.1.101:8000/api/v1/';
   static const appImgBaseUrl =
       'https://serv.school_flutter_frontend.app/uploads/';
 }

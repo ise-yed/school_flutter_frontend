@@ -41,7 +41,7 @@ class AuthServices {
           final user = UserModel.fromJson(userJson);
           await saveUserSession(accessToken: accessToken, user: user);
           if (user.id != null && user.id!.isNotEmpty && user.schoolId != null) {
-            MessagingService.instance.onLogin(user.id!);
+            // MessagingService.instance.onLogin(user.id!);
           }
           return user;
         }
@@ -132,9 +132,9 @@ class AuthServices {
             userJson is Map<String, dynamic>) {
           final user = UserModel.fromJson(userJson);
           await saveUserSession(accessToken: accessToken, user: user);
-          if (user.id != null && user.id!.isNotEmpty && user.schoolId != null) {
-            MessagingService.instance.onLogin(user.id!);
-          }
+          // if (user.id != null && user.id!.isNotEmpty && user.schoolId != null) {
+          //   MessagingService.instance.onLogin(user.id!);
+          // }
           return ParentOtpVerifyResult(user: user);
         }
       }

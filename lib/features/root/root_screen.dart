@@ -11,6 +11,9 @@ import 'package:school_flutter_frontend/features/auth/bloc/auth_bloc.dart';
 import 'package:school_flutter_frontend/features/auth/models/user_model.dart';
 import 'package:school_flutter_frontend/features/auth/screens/login.dart';
 import 'package:school_flutter_frontend/features/profile/screens/notification_screen.dart';
+import 'package:school_flutter_frontend/features/schools/screens/school_structure_screen.dart';
+import 'package:school_flutter_frontend/features/schools/screens/superuser_schools_screen.dart';
+import 'package:school_flutter_frontend/features/students/screens/admin_students_hub_screen.dart';
 
 ValueNotifier<int> currentIndex = ValueNotifier<int>(0);
 
@@ -55,13 +58,7 @@ class _RootScreenState extends State<RootScreen> {
           _RoleNavTab(
             label: isEn ? 'Schools' : 'مدارس',
             icon: Icons.domain_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Schools Management' : 'مدیریت مدارس سامانه',
-              subtitle: isEn
-                  ? 'Phase 3.1: Create & manage schools and school admins'
-                  : 'آماده اتصال به /api/v1/schools/manage/ در گام ۳.۱',
-              icon: Icons.domain_rounded,
-            ),
+            page: SuperuserSchoolsScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Profile' : 'حساب کاربری',
@@ -75,23 +72,12 @@ class _RootScreenState extends State<RootScreen> {
           _RoleNavTab(
             label: isEn ? 'Dashboard' : 'پیشخوان',
             icon: Icons.dashboard_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'School Admin Dashboard' : 'پیشخوان مدیریت مدرسه',
-              subtitle: isEn ? 'Quick access to school modules' : 'دسترسی سریع به ساختار آموزشی، اکسل، حضور و غیاب و اعلان‌ها',
-              icon: Icons.dashboard_rounded,
-              showNotificationsAction: true,
-            ),
+            page: SchoolStructureScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Students' : 'دانش‌آموزان',
             icon: Icons.groups_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Students & Parents' : 'دانش‌آموزان و اولیا',
-              subtitle: isEn
-                  ? 'Search students, enrollments & parent links'
-                  : 'جستجوی فازی، ثبت‌نام کلاس و مدیریت اتصال اولیا',
-              icon: Icons.groups_rounded,
-            ),
+            page: AdminStudentsHubScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Operations' : 'حضور و انضباط',
@@ -118,14 +104,7 @@ class _RootScreenState extends State<RootScreen> {
           _RoleNavTab(
             label: isEn ? 'My Classes' : 'کلاس‌های من',
             icon: Icons.class_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Assigned Classes' : 'کلاس‌ها و برنامه هفتگی من',
-              subtitle: isEn
-                  ? 'Your assigned classrooms and sessions'
-                  : 'مشاهده کلاس‌ها و زنگ‌های تخصیص‌یافته به شما',
-              icon: Icons.class_rounded,
-              showNotificationsAction: true,
-            ),
+            page: SchoolStructureScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Attendance' : 'حضور و غیاب',

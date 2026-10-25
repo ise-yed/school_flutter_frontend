@@ -42,9 +42,14 @@ class _SplashScreenState extends State<SplashScreen> {
     if (isLogin.value &&
         currentUserModel.role != null &&
         currentUserModel.role!.isNotEmpty) {
+      // goScreen(
+      //   context: context,
+      //   screen: const RootScreen(),
+      //   closeAllScreen: true,
+      // );
       goScreen(
         context: context,
-        screen: const RootScreen(),
+        screen: const LoginScreen(),
         closeAllScreen: true,
       );
     } else {
