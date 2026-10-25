@@ -10,6 +10,8 @@ import 'package:school_flutter_frontend/core/utils/navigator.dart';
 import 'package:school_flutter_frontend/features/auth/bloc/auth_bloc.dart';
 import 'package:school_flutter_frontend/features/auth/models/user_model.dart';
 import 'package:school_flutter_frontend/features/auth/screens/login.dart';
+import 'package:school_flutter_frontend/features/operations/screens/attendance_and_discipline_screen.dart';
+import 'package:school_flutter_frontend/features/operations/screens/parent_dashboard_screen.dart';
 import 'package:school_flutter_frontend/features/profile/screens/notification_screen.dart';
 import 'package:school_flutter_frontend/features/schools/screens/school_structure_screen.dart';
 import 'package:school_flutter_frontend/features/schools/screens/superuser_schools_screen.dart';
@@ -58,7 +60,7 @@ class _RootScreenState extends State<RootScreen> {
           _RoleNavTab(
             label: isEn ? 'Schools' : 'مدارس',
             icon: Icons.domain_rounded,
-            page: SuperuserSchoolsScreen(),
+            page: const SuperuserSchoolsScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Profile' : 'حساب کاربری',
@@ -70,30 +72,22 @@ class _RootScreenState extends State<RootScreen> {
       case UserRole.schoolAdmin:
         return [
           _RoleNavTab(
-            label: isEn ? 'Dashboard' : 'پیشخوان',
-            icon: Icons.dashboard_rounded,
-            page: SchoolStructureScreen(),
+            label: isEn ? 'Structure' : 'ساختار و کادر',
+            icon: Icons.account_tree_rounded,
+            page: const SchoolStructureScreen(),
           ),
           _RoleNavTab(
-            label: isEn ? 'Students' : 'دانش‌آموزان',
+            label: isEn ? 'Students' : 'دانش‌آموزان و اکسل',
             icon: Icons.groups_rounded,
-            page: AdminStudentsHubScreen(),
+            page: const AdminStudentsHubScreen(),
           ),
           _RoleNavTab(
-            label: isEn ? 'Operations' : 'حضور و انضباط',
+            label: isEn ? 'Operations' : 'حضور، انضباط و اعلان',
             icon: Icons.fact_check_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn
-                  ? 'Attendance & Discipline'
-                  : 'حضور و غیاب و پرونده انضباطی',
-              subtitle: isEn
-                  ? 'Class sheets, bulk submit, discipline & audit logs'
-                  : 'ثبت یک‌جای حضور و غیاب، پرونده انضباطی و تاریخچه تغییرات',
-              icon: Icons.fact_check_rounded,
-            ),
+            page: const AttendanceAndDisciplineScreen(),
           ),
           _RoleNavTab(
-            label: isEn ? 'Management' : 'مدیریت',
+            label: isEn ? 'Settings' : 'حساب و تنظیمات',
             icon: Icons.settings_suggest_rounded,
             page: const _RoleProfileAndSettingsView(),
           ),
@@ -104,31 +98,17 @@ class _RootScreenState extends State<RootScreen> {
           _RoleNavTab(
             label: isEn ? 'My Classes' : 'کلاس‌های من',
             icon: Icons.class_rounded,
-            page: SchoolStructureScreen(),
+            page: const SchoolStructureScreen(),
           ),
           _RoleNavTab(
-            label: isEn ? 'Attendance' : 'حضور و غیاب',
+            label: isEn ? 'Attendance' : 'حضور و انضباط',
             icon: Icons.how_to_reg_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Class Attendance' : 'ثبت حضور و غیاب کلاس',
-              subtitle: isEn
-                  ? 'Roll-call sheet & bulk attendance submission'
-                  : 'دریافت لیست کلاس و ثبت یک‌جای حضور و غیاب زنگ',
-              icon: Icons.how_to_reg_rounded,
-            ),
+            page: const AttendanceAndDisciplineScreen(),
           ),
           _RoleNavTab(
-            label: isEn ? 'Discipline' : 'انضباطی',
-            icon: Icons.assignment_late_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn
-                  ? 'Students & Discipline'
-                  : 'جستجوی دانش‌آموز و انضباطی',
-              subtitle: isEn
-                  ? 'Search students and record disciplinary/merit items'
-                  : 'جستجو در دانش‌آموزان کلاس خود و ثبت موارد انضباطی/تشویقی',
-              icon: Icons.assignment_late_rounded,
-            ),
+            label: isEn ? 'Students' : 'جستجوی دانش‌آموز',
+            icon: Icons.person_search_rounded,
+            page: const AdminStudentsHubScreen(),
           ),
           _RoleNavTab(
             label: isEn ? 'Profile' : 'حساب کاربری',
@@ -141,38 +121,19 @@ class _RootScreenState extends State<RootScreen> {
       default:
         return [
           _RoleNavTab(
-            label: isEn ? 'My Children' : 'فرزندان من',
+            label: isEn ? 'Overview' : 'فرزندان من',
             icon: Icons.child_care_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'My Children Overview' : 'وضعیت فرزندان من',
-              subtitle: isEn
-                  ? 'Summary of your linked children'
-                  : 'خلاصه وضعیت حضور و غیاب و انضباطی فرزند(ان)',
-              icon: Icons.child_care_rounded,
-              showNotificationsAction: true,
-            ),
+            page: const ParentDashboardScreen(initialSection: 0),
           ),
           _RoleNavTab(
             label: isEn ? 'Attendance' : 'حضور و غیاب',
             icon: Icons.event_available_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Attendance History' : 'سوابق حضور و غیاب فرزند',
-              subtitle: isEn
-                  ? 'Read-only view of daily and session attendance'
-                  : 'مشاهده سوابق حضور، غیبت و تأخیر به تفکیک تاریخ و زنگ',
-              icon: Icons.event_available_rounded,
-            ),
+            page: const ParentDashboardScreen(initialSection: 1),
           ),
           _RoleNavTab(
             label: isEn ? 'Discipline' : 'پرونده انضباطی',
-            icon: Icons.rule_folder_rounded,
-            page: _RoleSectionPlaceholder(
-              title: isEn ? 'Disciplinary & Merit' : 'پرونده انضباطی و تشویقی',
-              subtitle: isEn
-                  ? 'Read-only view of disciplinary and merit records'
-                  : 'مشاهده موارد تشویقی و انضباطی ثبت‌شده برای فرزند',
-              icon: Icons.assignment_rounded,
-            ),
+            icon: Icons.assignment_rounded,
+            page: const ParentDashboardScreen(initialSection: 2),
           ),
           _RoleNavTab(
             label: isEn ? 'Profile' : 'حساب و پیام‌ها',
@@ -239,114 +200,6 @@ class _RoleNavTab {
   });
 }
 
-class _RoleSectionPlaceholder extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final bool showNotificationsAction;
-
-  const _RoleSectionPlaceholder({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    this.showNotificationsAction = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return SafeArea(
-      child: Padding(
-        padding: EdgeInsets.all(20.r),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        currentUserModel.displayName,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontSize: 18.sp,
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 4.h,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary500.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          currentUserModel.roleDisplayFa,
-                          style: theme.textTheme.labelMedium,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (showNotificationsAction &&
-                    currentUserModel.schoolId != null)
-                  IconButton(
-                    onPressed: () {
-                      goScreen(
-                        context: context,
-                        screen: const NotificationScreen(),
-                      );
-                    },
-                    icon: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: AppColors.primary500,
-                    ),
-                  ),
-              ],
-            ),
-            const Spacer(),
-            Center(
-              child: Container(
-                padding: EdgeInsets.all(24.r),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceBright,
-                  borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(color: theme.colorScheme.surfaceDim),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 48.r, color: AppColors.primary500),
-                    SizedBox(height: 14.h),
-                    Text(
-                      title,
-                      style: theme.textTheme.headlineMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const Spacer(),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// صفحه حساب کاربری و تنظیمات (شامل صندوق پیام، سوییچ تغییر زبان، سوییچ تم و خروج امن)
 class _RoleProfileAndSettingsView extends StatelessWidget {
   const _RoleProfileAndSettingsView();
 
@@ -406,8 +259,6 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
             ),
           ),
           SizedBox(height: 20.h),
-
-          // صندوق اعلان‌ها (برای کاربران وابسته به مدرسه)
           if (currentUserModel.schoolId != null)
             ListTile(
               shape: RoundedRectangleBorder(
@@ -428,8 +279,6 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
               },
             ),
           if (currentUserModel.schoolId != null) SizedBox(height: 12.h),
-
-          // سوییچ تغییر تم روشن / تاریک
           ValueListenableBuilder<bool>(
             valueListenable: isThemeLight,
             builder: (context, isLight, _) {
@@ -456,8 +305,6 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
             },
           ),
           SizedBox(height: 12.h),
-
-          // سوییچ تغییر زبان برنامه (فارسی / انگلیسی)
           ListTile(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14.r),
@@ -485,8 +332,6 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
             ),
           ),
           SizedBox(height: 24.h),
-
-          // دکمه خروج از حساب کاربری با دیالوگ تأیید
           ListTile(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(14.r),
