@@ -10,6 +10,7 @@ import 'package:school_flutter_frontend/core/widgets/global_error_section.dart';
 import 'package:school_flutter_frontend/core/widgets/global_loading_section.dart';
 import 'package:school_flutter_frontend/core/widgets/main_button.dart';
 import 'package:school_flutter_frontend/core/widgets/main_textfield.dart';
+import 'package:school_flutter_frontend/core/widgets/notification_bell_button.dart';
 import 'package:toastification/toastification.dart';
 
 import '../models/school_models.dart';
@@ -51,7 +52,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
       final results = await Future.wait([
         _service.getAcademicYears(),
         _service.getGrades(),
-        _service.getClassrooms(),
+        _service.getClassrooms(isActive: true),
         _service.getTeacherAssignments(),
         if (_isAdmin) _service.getStaff(),
       ]);
@@ -91,6 +92,30 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     return '$y-$m-$d';
   }
 
+  Future<bool> _confirmDeleteDialog({
+    required String title,
+    required String content,
+  }) async {
+    final res = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, false),
+            child: const Text('انصراف'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            child: const Text('حذف', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+    return res == true;
+  }
+
   // -------------------- دیالوگ ساخت کلاس جدید --------------------
   Future<void> _showCreateClassroomDialog() async {
     if (_years.isEmpty || _grades.isEmpty) {
@@ -109,6 +134,13 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
         .id;
     int? selectedGradeId = _grades.first.id;
     bool saving = false;
+
+    final yearFilterList = _years
+        .map((y) => FilterModel(name: y.title, code: y.id))
+        .toList();
+    final gradeFilterList = _grades
+        .map((g) => FilterModel(name: g.title, code: g.id))
+        .toList();
 
     await showModalBottomSheet(
       context: context,
@@ -140,11 +172,10 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                     hintText: 'انتخاب سال تحصیلی',
                     enableSearch: false,
                     defaultTitle: _years
-                        .firstWhere((y) => y.id == selectedYearId)
-                        .title,
-                    dataList: _years
-                        .map((y) => FilterModel(name: y.title, code: y.id))
-                        .toList(),
+                        .where((y) => y.id == selectedYearId)
+                        .map((y) => y.title)
+                        .firstOrNull,
+                    dataList: yearFilterList,
                     onChanged: (item) =>
                         setSheetState(() => selectedYearId = item?.code),
                   ),
@@ -153,11 +184,10 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                     hintText: 'انتخاب پایه تحصیلی',
                     enableSearch: false,
                     defaultTitle: _grades
-                        .firstWhere((g) => g.id == selectedGradeId)
-                        .title,
-                    dataList: _grades
-                        .map((g) => FilterModel(name: g.title, code: g.id))
-                        .toList(),
+                        .where((g) => g.id == selectedGradeId)
+                        .map((g) => g.title)
+                        .firstOrNull,
+                    dataList: gradeFilterList,
                     onChanged: (item) =>
                         setSheetState(() => selectedGradeId = item?.code),
                   ),
@@ -207,7 +237,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
-  // -------------------- دیالوگ تخصیص معلم و زنگ --------------------
+  // -------------------- دیالوگ تخصیص معلم و زنگ (با نمایش دقیق روز و شماره زنگ) --------------------
   Future<void> _showCreateAssignmentDialog() async {
     final teachers = _staff.where((s) => s.role == 'TEACHER').toList();
     if (teachers.isEmpty || _classrooms.isEmpty) {
@@ -227,6 +257,23 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     int selectedSession = 1;
     bool saving = false;
 
+    final teacherFilterList = teachers
+        .map((t) => FilterModel(name: t.fullName, code: t.id))
+        .toList();
+    final classroomFilterList = _classrooms
+        .map((c) => FilterModel(name: c.name, code: c.id))
+        .toList();
+    final dayFilterList = <FilterModel>[
+      FilterModel(name: 'همه روزها', code: -1),
+      ...TeacherAssignmentModel.persianWeekDays.entries.map(
+        (e) => FilterModel(name: e.value, code: e.key),
+      ),
+    ];
+    final sessionFilterList = List.generate(
+      6,
+      (i) => FilterModel(name: 'زنگ ${i + 1}', code: i + 1),
+    );
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -237,6 +284,12 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            final currentDayTitle = selectedDayOfWeek == null
+                ? 'همه روزها'
+                : (TeacherAssignmentModel.persianWeekDays[selectedDayOfWeek] ??
+                      'همه روزها');
+            final currentSessionTitle = 'زنگ $selectedSession';
+
             return SingleChildScrollView(
               padding: EdgeInsets.only(
                 left: 20.w,
@@ -255,20 +308,22 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                   SizedBox(height: 16.h),
                   DropdownWidget(
                     hintText: 'انتخاب معلم',
-                    defaultTitle: teachers.first.fullName,
-                    dataList: teachers
-                        .map((t) => FilterModel(name: t.fullName, code: t.id))
-                        .toList(),
+                    defaultTitle: teachers
+                        .where((t) => t.id == selectedTeacherId)
+                        .map((t) => t.fullName)
+                        .firstOrNull,
+                    dataList: teacherFilterList,
                     onChanged: (item) =>
                         setSheetState(() => selectedTeacherId = item?.code),
                   ),
                   SizedBox(height: 12.h),
                   DropdownWidget(
                     hintText: 'انتخاب کلاس',
-                    defaultTitle: _classrooms.first.name,
-                    dataList: _classrooms
-                        .map((c) => FilterModel(name: c.name, code: c.id))
-                        .toList(),
+                    defaultTitle: _classrooms
+                        .where((c) => c.id == selectedClassroomId)
+                        .map((c) => c.name)
+                        .firstOrNull,
+                    dataList: classroomFilterList,
                     onChanged: (item) =>
                         setSheetState(() => selectedClassroomId = item?.code),
                   ),
@@ -284,15 +339,8 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                         child: DropdownWidget(
                           hintText: 'روز هفته',
                           enableSearch: false,
-                          defaultTitle: 'همه روزها',
-                          dataList: [
-                            FilterModel(name: 'همه روزها', code: -1),
-                            ...TeacherAssignmentModel.persianWeekDays.entries
-                                .map(
-                                  (e) =>
-                                      FilterModel(name: e.value, code: e.key),
-                                ),
-                          ],
+                          defaultTitle: currentDayTitle,
+                          dataList: dayFilterList,
                           onChanged: (item) {
                             setSheetState(() {
                               selectedDayOfWeek =
@@ -308,12 +356,8 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                         child: DropdownWidget(
                           hintText: 'شماره زنگ',
                           enableSearch: false,
-                          defaultTitle: 'زنگ ۱',
-                          dataList: List.generate(
-                            6,
-                            (i) =>
-                                FilterModel(name: 'زنگ ${i + 1}', code: i + 1),
-                          ),
+                          defaultTitle: currentSessionTitle,
+                          dataList: sessionFilterList,
                           onChanged: (item) {
                             if (item != null) {
                               setSheetState(() => selectedSession = item.code);
@@ -366,15 +410,21 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
-  // -------------------- دیالوگ افزودن کادر یا معلم --------------------
-  Future<void> _showCreateStaffDialog() async {
-    final userCtrl = TextEditingController();
+  // -------------------- دیالوگ افزودن یا ویرایش کادر و معلم --------------------
+  Future<void> _showStaffFormDialog({StaffMemberModel? existing}) async {
+    final userCtrl = TextEditingController(text: existing?.username ?? '');
     final passCtrl = TextEditingController();
-    final fNameCtrl = TextEditingController();
-    final lNameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    String selectedRole = 'TEACHER';
+    final fNameCtrl = TextEditingController(text: existing?.firstName ?? '');
+    final lNameCtrl = TextEditingController(text: existing?.lastName ?? '');
+    final phoneCtrl = TextEditingController(text: existing?.phoneNumber ?? '');
+    String selectedRole = existing?.role ?? 'TEACHER';
+    bool isActive = existing?.isActive ?? true;
     bool saving = false;
+
+    final roleFilterList = [
+      FilterModel(name: 'معلم', code: 1),
+      FilterModel(name: 'کادر آموزشی / ادمین', code: 2),
+    ];
 
     await showModalBottomSheet(
       context: context,
@@ -386,6 +436,10 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            final currentRoleTitle = selectedRole == 'SCHOOL_ADMIN'
+                ? 'کادر آموزشی / ادمین'
+                : 'معلم';
+
             return SingleChildScrollView(
               padding: EdgeInsets.only(
                 left: 20.w,
@@ -398,18 +452,17 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'افزودن معلم یا کادر آموزشی',
+                    existing == null
+                        ? 'افزودن معلم یا کادر آموزشی'
+                        : 'ویرایش مشخصات کادر / معلم',
                     style: Theme.of(ctx).textTheme.bodyLarge,
                   ),
                   SizedBox(height: 16.h),
                   DropdownWidget(
                     hintText: 'نقش کاربر',
                     enableSearch: false,
-                    defaultTitle: 'معلم',
-                    dataList: [
-                      FilterModel(name: 'معلم', code: 1),
-                      FilterModel(name: 'کادر آموزشی / ادمین', code: 2),
-                    ],
+                    defaultTitle: currentRoleTitle,
+                    dataList: roleFilterList,
                     onChanged: (item) {
                       setSheetState(() {
                         selectedRole = item?.code == 2
@@ -445,7 +498,9 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                   CoreTextField(
                     controller: passCtrl,
                     obscure: true,
-                    hint: 'رمز عبور (حداقل ۶ کاراکتر)',
+                    hint: existing == null
+                        ? 'رمز عبور (حداقل ۶ کاراکتر)'
+                        : 'رمز عبور جدید (در صورت عدم تغییر خالی بگذارید)',
                   ),
                   SizedBox(height: 12.h),
                   CoreTextField(
@@ -453,25 +508,54 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                     keyboardType: TextInputType.phone,
                     hint: 'شماره موبایل (اختیاری)',
                   ),
+                  if (existing != null)
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('حساب کاربری فعال باشد'),
+                      value: isActive,
+                      activeColor: AppColors.primary500,
+                      onChanged: (v) => setSheetState(() => isActive = v),
+                    ),
                   SizedBox(height: 20.h),
                   CustomElevatedButton(
                     loading: saving,
-                    text: 'ایجاد کاربر',
+                    text: existing == null ? 'ایجاد کاربر' : 'ذخیره تغییرات',
                     onTap: () async {
-                      if (userCtrl.text.trim().isEmpty ||
-                          passCtrl.text.length < 6) {
+                      if (userCtrl.text.trim().isEmpty) return;
+                      if (existing == null && passCtrl.text.length < 6) {
+                        showCustomSnackBar(
+                          context: ctx,
+                          title: 'خطا',
+                          content: 'رمز عبور برای کاربر جدید الزامی است (حداقل ۶ کاراکتر).',
+                          status: ToastificationType.warning,
+                        );
                         return;
                       }
                       setSheetState(() => saving = true);
                       try {
-                        await _service.createStaff(
-                          username: userCtrl.text,
-                          password: passCtrl.text,
-                          firstName: fNameCtrl.text,
-                          lastName: lNameCtrl.text,
-                          phoneNumber: phoneCtrl.text,
-                          role: selectedRole,
-                        );
+                        if (existing == null) {
+                          await _service.createStaff(
+                            username: userCtrl.text,
+                            password: passCtrl.text,
+                            firstName: fNameCtrl.text,
+                            lastName: lNameCtrl.text,
+                            phoneNumber: phoneCtrl.text,
+                            role: selectedRole,
+                          );
+                        } else {
+                          await _service.updateStaff(
+                            id: existing.id,
+                            username: userCtrl.text,
+                            password: passCtrl.text.isNotEmpty
+                                ? passCtrl.text
+                                : null,
+                            firstName: fNameCtrl.text,
+                            lastName: lNameCtrl.text,
+                            phoneNumber: phoneCtrl.text,
+                            role: selectedRole,
+                            isActive: isActive,
+                          );
+                        }
                         if (ctx.mounted) Navigator.pop(ctx);
                         _loadAll();
                       } catch (e) {
@@ -704,22 +788,25 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _isAdmin
-                              ? 'ساختار آموزشی و کادر مدرسه'
-                              : 'کلاس‌ها و برنامه هفتگی من',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                        SizedBox(height: 2.h),
-                        Text(
-                          '${currentUserModel.displayName} • ${currentUserModel.roleDisplayFa}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _isAdmin
+                                ? 'ساختار آموزشی و کادر مدرسه'
+                                : 'کلاس‌ها و برنامه هفتگی من',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            '${currentUserModel.displayName} • ${currentUserModel.roleDisplayFa}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
                     ),
+                    const NotificationBellButton(),
                     IconButton(
                       onPressed: _loadAll,
                       icon: const Icon(Icons.refresh_rounded),
@@ -762,6 +849,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
+  // ==================== تب ۱: کلاس‌ها (همراه با دکمه حذف برای SCHOOL_ADMIN) ====================
   Widget _buildClassroomsTab() {
     final theme = Theme.of(context);
     return Scaffold(
@@ -775,7 +863,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
             )
           : null,
       body: _classrooms.isEmpty
-          ? const Center(child: Text('هیچ کلاسی یافت نشد.'))
+          ? const Center(child: Text('هیچ کلاس فعالی یافت نشد.'))
           : ListView.separated(
               padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 88.h),
               itemCount: _classrooms.length,
@@ -818,16 +906,43 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                         ),
                       ),
                       if (_isAdmin)
-                        Switch(
-                          value: c.isActive,
-                          activeColor: AppColors.primary500,
-                          onChanged: (val) async {
-                            await _service.updateClassroom(
-                              id: c.id,
-                              isActive: val,
+                        IconButton(
+                          tooltip: 'حذف کلاس',
+                          onPressed: () async {
+                            final confirmed = await _confirmDeleteDialog(
+                              title: 'حذف کلاس «${c.name}»',
+                              content: 'آیا از حذف و غیرفعال‌سازی این کلاس اطمینان دارید؟',
                             );
-                            _loadAll();
+                            if (!confirmed) return;
+                            try {
+                              await _service.updateClassroom(
+                                id: c.id,
+                                isActive: false,
+                              );
+                              _loadAll();
+                              if (mounted) {
+                                showCustomSnackBar(
+                                  context: context,
+                                  title: 'حذف شد',
+                                  content: 'کلاس «${c.name}» با موفقیت حذف شد.',
+                                  status: ToastificationType.success,
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                showCustomSnackBar(
+                                  context: context,
+                                  title: 'خطا در حذف کلاس',
+                                  content: getAppErrorMessage(e),
+                                  status: ToastificationType.error,
+                                );
+                              }
+                            }
                           },
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppColors.error,
+                          ),
                         ),
                     ],
                   ),
@@ -837,6 +952,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
+  // ==================== تب ۲: برنامه معلمان ====================
   Widget _buildAssignmentsTab() {
     final theme = Theme.of(context);
     return Scaffold(
@@ -899,7 +1015,14 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                       ),
                       if (_isAdmin)
                         IconButton(
+                          tooltip: 'حذف تخصیص',
                           onPressed: () async {
+                            final ok = await _confirmDeleteDialog(
+                              title: 'حذف زنگ کلاسی',
+                              content:
+                                  'آیا از حذف درس «${a.subjectName}» در زنگ ${a.sessionNumber} اطمینان دارید؟',
+                            );
+                            if (!ok) return;
                             await _service.deleteTeacherAssignment(a.id);
                             _loadAll();
                           },
@@ -916,6 +1039,7 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
+  // ==================== تب ۳: سال تحصیلی و پایه ====================
   Widget _buildAcademicYearsAndGradesTab() {
     final theme = Theme.of(context);
     return ListView(
@@ -947,107 +1071,93 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                 width: y.isCurrent ? 1.5 : 1.0,
               ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(y.title, style: theme.textTheme.titleMedium),
-                          SizedBox(height: 4.h),
-                          Text(
-                            'از ${y.startDate} تا ${y.endDate}',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(y.title, style: theme.textTheme.titleMedium),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'از ${y.startDate} تا ${y.endDate}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                if (y.isCurrent)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 10.w,
+                      vertical: 4.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusConfirmedBg,
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Text(
+                      'سال جاری',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: AppColors.statusConfirmedFg,
                       ),
                     ),
-                    if (y.isCurrent)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 10.w,
-                          vertical: 4.h,
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton.icon(
+                        onPressed: () async {
+                          try {
+                            await _service.updateAcademicYear(
+                              id: y.id,
+                              isCurrent: true,
+                            );
+                            _loadAll();
+                          } catch (e) {
+                            if (mounted) {
+                              showCustomSnackBar(
+                                context: context,
+                                title: 'خطا',
+                                content: getAppErrorMessage(e),
+                                status: ToastificationType.error,
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.check_circle_outline_rounded,
+                          size: 18,
                         ),
-                        decoration: BoxDecoration(
-                          color: AppColors.statusConfirmedBg,
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          'سال جاری',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: AppColors.statusConfirmedFg,
-                          ),
-                        ),
-                      )
-                    else
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextButton.icon(
-                            onPressed: () async {
-                              try {
-                                await _service.updateAcademicYear(
-                                  id: y.id,
-                                  isCurrent: true,
-                                );
-                                _loadAll();
-                                if (mounted) {
-                                  showCustomSnackBar(
-                                    context: context,
-                                    title: 'به‌روزرسانی شد',
-                                    content:
-                                        'سال تحصیلی «${y.title}» به عنوان سال جاری انتخاب شد.',
-                                    status: ToastificationType.success,
-                                  );
-                                }
-                              } catch (e) {
-                                if (mounted) {
-                                  showCustomSnackBar(
-                                    context: context,
-                                    title: 'خطا',
-                                    content: getAppErrorMessage(e),
-                                    status: ToastificationType.error,
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(
-                              Icons.check_circle_outline_rounded,
-                              size: 18,
-                            ),
-                            label: const Text('انتخاب به‌عنوان سال جاری'),
-                          ),
-                          IconButton(
-                            tooltip: 'حذف سال تحصیلی',
-                            onPressed: () async {
-                              try {
-                                await _service.deleteAcademicYear(y.id);
-                                _loadAll();
-                              } catch (e) {
-                                if (mounted) {
-                                  showCustomSnackBar(
-                                    context: context,
-                                    title: 'خطا در حذف',
-                                    content: getAppErrorMessage(e),
-                                    status: ToastificationType.error,
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(
-                              Icons.delete_outline_rounded,
-                              color: AppColors.error,
-                              size: 20,
-                            ),
-                          ),
-                        ],
+                        label: const Text('تبدیل به سال جاری'),
                       ),
-                  ],
-                ),
+                      IconButton(
+                        tooltip: 'حذف سال تحصیلی',
+                        onPressed: () async {
+                          try {
+                            await _service.deleteAcademicYear(y.id);
+                            _loadAll();
+                          } catch (e) {
+                            if (mounted) {
+                              showCustomSnackBar(
+                                context: context,
+                                title: 'خطا در حذف',
+                                content: getAppErrorMessage(e),
+                                status: ToastificationType.error,
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          color: AppColors.error,
+                          size: 20,
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
           ),
@@ -1096,13 +1206,14 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
     );
   }
 
+  // ==================== تب ۴: کادر و معلمان (همراه با دکمه ویرایش و حذف) ====================
   Widget _buildStaffTab() {
     final theme = Theme.of(context);
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary500,
         foregroundColor: Colors.white,
-        onPressed: _showCreateStaffDialog,
+        onPressed: () => _showStaffFormDialog(),
         icon: const Icon(Icons.person_add_rounded),
         label: const Text('کاربر جدید'),
       ),
@@ -1114,6 +1225,8 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
               separatorBuilder: (_, __) => SizedBox(height: 10.h),
               itemBuilder: (context, index) {
                 final s = _staff[index];
+                final isSelf = currentUserModel.id == s.id.toString();
+
                 return Container(
                   padding: EdgeInsets.all(14.r),
                   decoration: BoxDecoration(
@@ -1149,6 +1262,49 @@ class _SchoolStructureScreenState extends State<SchoolStructureScreen> {
                           ],
                         ),
                       ),
+                      IconButton(
+                        tooltip: 'ویرایش',
+                        onPressed: () => _showStaffFormDialog(existing: s),
+                        icon: const Icon(Icons.edit_outlined, size: 20),
+                      ),
+                      if (!isSelf)
+                        IconButton(
+                          tooltip: 'حذف کادر / معلم',
+                          onPressed: () async {
+                            final confirmed = await _confirmDeleteDialog(
+                              title: 'حذف «${s.fullName}»',
+                              content: 'آیا از حذف این کاربر از کادر مدرسه اطمینان دارید؟',
+                            );
+                            if (!confirmed) return;
+                            try {
+                              await _service.deleteStaff(s.id);
+                              _loadAll();
+                              if (mounted) {
+                                showCustomSnackBar(
+                                  context: context,
+                                  title: 'حذف شد',
+                                  content:
+                                      'کاربر «${s.fullName}» با موفقیت حذف شد.',
+                                  status: ToastificationType.success,
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                showCustomSnackBar(
+                                  context: context,
+                                  title: 'خطا در حذف کاربر',
+                                  content: getAppErrorMessage(e),
+                                  status: ToastificationType.error,
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline_rounded,
+                            color: AppColors.error,
+                            size: 20,
+                          ),
+                        ),
                     ],
                   ),
                 );

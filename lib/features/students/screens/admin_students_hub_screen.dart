@@ -34,7 +34,8 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
   final StudentService _studentService = StudentService();
   final SchoolService _schoolService = SchoolService();
   final TextEditingController _searchController = TextEditingController();
-
+  final TextEditingController _parentSearchController = TextEditingController();
+  String _parentSearchQuery = '';
   bool _isLoading = true;
   String? _error;
 
@@ -288,6 +289,7 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
                           await _studentService.enrollStudent(
                             studentId: saved.id,
                             classroomId: selectedClassroomId!,
+                            previousClassroomId: existing?.currentClassroomId,
                           );
                         }
 
@@ -316,11 +318,18 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
   }
 
   // -------------------- دیالوگ اتصال دستی ولی به دانش‌آموز --------------------
+  // ۳. متد اصلاح‌شده _showAssignParentDialog (رفع مشکل نمایش نسبت ولی پس از انتخاب):
   Future<void> _showAssignParentDialog({StudentModel? student}) async {
     final ncCtrl = TextEditingController(text: student?.nationalCode ?? '');
     final phoneCtrl = TextEditingController();
     String selectedRelation = 'FATHER';
     bool saving = false;
+
+    final relationItems = [
+      FilterModel(name: 'پدر', code: 1, id: 'FATHER'),
+      FilterModel(name: 'مادر', code: 2, id: 'MOTHER'),
+      FilterModel(name: 'سرپرست', code: 3, id: 'GUARDIAN'),
+    ];
 
     await showModalBottomSheet(
       context: context,
@@ -332,6 +341,13 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setSheetState) {
+            final currentRelationTitle = relationItems
+                .firstWhere(
+                  (r) => r.id == selectedRelation,
+                  orElse: () => relationItems.first,
+                )
+                .name;
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 20.w,
@@ -367,18 +383,12 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
                   DropdownWidget(
                     hintText: 'نسبت با دانش‌آموز',
                     enableSearch: false,
-                    defaultTitle: 'پدر',
-                    dataList: [
-                      FilterModel(name: 'پدر', code: 1),
-                      FilterModel(name: 'مادر', code: 2),
-                      FilterModel(name: 'سرپرست', code: 3),
-                    ],
+                    defaultTitle: currentRelationTitle,
+                    dataList: relationItems,
                     onChanged: (item) {
-                      setSheetState(() {
-                        if (item?.code == 1) selectedRelation = 'FATHER';
-                        if (item?.code == 2) selectedRelation = 'MOTHER';
-                        if (item?.code == 3) selectedRelation = 'GUARDIAN';
-                      });
+                      if (item?.id != null) {
+                        setSheetState(() => selectedRelation = item!.id!);
+                      }
                     },
                   ),
                   SizedBox(height: 20.h),
@@ -855,8 +865,18 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
   }
 
   // ==================== تب ۲: مدیریت اتصال اولیا ====================
+  // ۴. متد اصلاح‌شده _buildParentLinksTab (همراه با قابلیت جستجوی اولیا بر اساس نام، کد ملی و موبایل):
   Widget _buildParentLinksTab() {
     final theme = Theme.of(context);
+    final q = _parentSearchQuery.trim();
+    final filteredLinks = q.isEmpty
+        ? _parentLinks
+        : _parentLinks.where((l) {
+            return l.studentFullName.contains(q) ||
+                l.studentNationalCode.contains(q) ||
+                l.parentPhone.contains(q) ||
+                l.fatherName.contains(q);
+          }).toList();
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -868,7 +888,21 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
       ),
       body: Column(
         children: [
-          SizedBox(height: 12.h),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 8.h),
+            child: SearchBoxWidget(
+              controller: _parentSearchController,
+              backColor: theme.colorScheme.surfaceBright,
+              haveFilter: false,
+              onChanged: (val) {
+                setState(() => _parentSearchQuery = val);
+              },
+              onCloseTap: () {
+                _parentSearchController.clear();
+                setState(() => _parentSearchQuery = '');
+              },
+            ),
+          ),
           CategoriesListFilter(
             categories: const ['همه اولیا', 'در انتظار تأیید', 'تأییدشده'],
             onCategorySelected: (val) {
@@ -880,14 +914,14 @@ class _AdminStudentsHubScreenState extends State<AdminStudentsHubScreen> {
           ),
           SizedBox(height: 8.h),
           Expanded(
-            child: _parentLinks.isEmpty
+            child: filteredLinks.isEmpty
                 ? const Center(child: Text('هیچ رکورد اتصال ولی یافت نشد.'))
                 : ListView.separated(
                     padding: EdgeInsets.fromLTRB(20.w, 8.h, 20.w, 88.h),
-                    itemCount: _parentLinks.length,
+                    itemCount: filteredLinks.length,
                     separatorBuilder: (_, __) => SizedBox(height: 10.h),
                     itemBuilder: (context, index) {
-                      final link = _parentLinks[index];
+                      final link = filteredLinks[index];
                       return Container(
                         padding: EdgeInsets.all(14.r),
                         decoration: BoxDecoration(

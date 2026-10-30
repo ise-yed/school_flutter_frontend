@@ -400,6 +400,14 @@ class SchoolService {
     }
   }
 
+  Future<void> deleteClassroom(int id) async {
+    try {
+      await apiProvider.delete('schools/classrooms/$id/');
+    } on DioException catch (e) {
+      _rethrow(e);
+    }
+  }
+
   Future<void> deleteTeacherAssignment(int id) async {
     try {
       await apiProvider.delete('schools/assignments/$id/');

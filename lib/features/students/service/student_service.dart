@@ -120,8 +120,28 @@ class StudentService {
   Future<EnrollmentModel> enrollStudent({
     required int studentId,
     required int classroomId,
+    int? previousClassroomId,
   }) async {
     try {
+      // اگر دانش‌آموز قبلاً در کلاسی ثبت‌نام شده است، رکورد Enrollment موجود را با PATCH آپدیت می‌کنیم
+      if (previousClassroomId != null) {
+        final existingList = await getEnrollments(
+          classroomId: previousClassroomId,
+        );
+        final match = existingList.results
+            .where((e) => e.student == studentId)
+            .firstOrNull;
+        if (match != null) {
+          final patchRes = await apiProvider.patch(
+            'students/enrollments/${match.id}/',
+            data: {'classroom': classroomId, 'is_active': true},
+          );
+          return EnrollmentModel.fromJson(
+            Map<String, dynamic>.from(patchRes.data),
+          );
+        }
+      }
+
       final res = await apiProvider.post(
         'students/enrollments/',
         data: {

@@ -93,20 +93,26 @@ class _DropdownWidgetState extends State<DropdownWidget> {
   @override
   void didUpdateWidget(covariant DropdownWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final dataChanged =
-        oldWidget.dataList.length != widget.dataList.length ||
-        !identical(oldWidget.dataList, widget.dataList);
     final defaultChanged = oldWidget.defaultTitle != widget.defaultTitle;
-    final currentStillExists = widget.dataList.any(
-      (d) => d.code == _selectedValue,
-    );
-    if (dataChanged || defaultChanged || !currentStillExists) {
+    final currentStillExists =
+        _selectedValue != null &&
+        widget.dataList.any((d) => d.code == _selectedValue);
+
+    if (defaultChanged) {
       final newCode = _deriveFromDefaultTitle(
         widget.defaultTitle,
         widget.dataList,
       );
       if (newCode != _selectedValue) {
         setState(() => _selectedValue = newCode);
+      }
+    } else if (!currentStillExists) {
+      final fallbackCode = _deriveFromDefaultTitle(
+        widget.defaultTitle,
+        widget.dataList,
+      );
+      if (fallbackCode != _selectedValue) {
+        setState(() => _selectedValue = fallbackCode);
       }
     }
   }

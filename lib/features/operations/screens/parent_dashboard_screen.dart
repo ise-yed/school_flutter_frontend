@@ -7,6 +7,7 @@ import 'package:school_flutter_frontend/core/utils/navigator.dart';
 import 'package:school_flutter_frontend/core/widgets/global_error_section.dart';
 import 'package:school_flutter_frontend/core/widgets/global_loading_section.dart';
 import 'package:school_flutter_frontend/features/profile/screens/notification_screen.dart';
+import 'package:school_flutter_frontend/core/widgets/notification_bell_button.dart';
 
 import '../../students/models/student_models.dart';
 import '../../students/service/student_service.dart';
@@ -116,7 +117,7 @@ class _ParentDashboardScreenState extends State<ParentDashboardScreen> {
                           onPressed: () {
                             goScreen(
                               context: context,
-                              screen: const NotificationScreen(),
+                              screen: const NotificationBellButton(),
                             );
                           },
                           icon: const Icon(

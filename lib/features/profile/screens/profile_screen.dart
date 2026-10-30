@@ -444,20 +444,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               title: "support".tr(),
                             ),
                           ),
-                          GestureDetector(
+                          ProfileHomeItem(
+                            iconPath: "assets/icons/logout.svg",
+                            title: "logout".tr(),
                             onTap: () {
                               showModalBottomSheet(
                                 context: context,
                                 backgroundColor: Colors.transparent,
+                                isScrollControlled: true,
                                 builder: (context) {
-                                  return LogoutDialog();
+                                  return const LogoutDialog();
                                 },
                               );
                             },
-                            child: ProfileHomeItem(
-                              iconPath: "assets/icons/logout.svg",
-                              title: "logout".tr(),
-                            ),
                           ),
                         ],
                       ),

@@ -6,12 +6,10 @@ import 'package:flutter_svg/svg.dart';
 import '../../../core/constants/app_setting.dart';
 import '../../../core/utils/navigator.dart';
 import '../../../core/widgets/main_button.dart';
-import '../../auth/models/user_model.dart';
-
 import 'package:school_flutter_frontend/core/widgets/reminders_appbar_widget.dart';
 
+import '../../auth/screens/login.dart';
 import '../../auth/service/auth_service.dart';
-import '../../splash/screens/splash_screen.dart';
 
 class LogoutDialog extends StatelessWidget {
   const LogoutDialog({super.key});
@@ -80,14 +78,13 @@ class LogoutDialog extends StatelessWidget {
                   onTap: () async {
                     try {
                       await AuthServices().logout();
-                    } catch (_) {}
-                    await prefs.clear();
-                    isLogin.value = false;
-                    currentUserModel = UserModel();
+                    } catch (_) {
+                      await clearUserSession();
+                    }
                     if (!context.mounted) return;
                     goScreen(
                       context: context,
-                      screen: const SplashScreen(),
+                      screen: const LoginScreen(),
                       closeAllScreen: true,
                     );
                   },

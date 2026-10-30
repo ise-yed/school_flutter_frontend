@@ -7,12 +7,14 @@ import 'package:school_flutter_frontend/core/constants/app_setting.dart';
 import 'package:school_flutter_frontend/core/localization/locale_initializer.dart';
 import 'package:school_flutter_frontend/core/themes/app_colors.dart';
 import 'package:school_flutter_frontend/core/utils/navigator.dart';
+import 'package:school_flutter_frontend/core/widgets/notification_bell_button.dart';
 import 'package:school_flutter_frontend/features/auth/bloc/auth_bloc.dart';
 import 'package:school_flutter_frontend/features/auth/models/user_model.dart';
 import 'package:school_flutter_frontend/features/auth/screens/login.dart';
 import 'package:school_flutter_frontend/features/operations/screens/attendance_and_discipline_screen.dart';
 import 'package:school_flutter_frontend/features/operations/screens/parent_dashboard_screen.dart';
 import 'package:school_flutter_frontend/features/profile/screens/notification_screen.dart';
+import 'package:school_flutter_frontend/features/profile/widgets/logout_dialog.dart';
 import 'package:school_flutter_frontend/features/schools/screens/school_structure_screen.dart';
 import 'package:school_flutter_frontend/features/schools/screens/superuser_schools_screen.dart';
 import 'package:school_flutter_frontend/features/students/screens/admin_students_hub_screen.dart';
@@ -260,22 +262,56 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
           ),
           SizedBox(height: 20.h),
           if (currentUserModel.schoolId != null)
-            ListTile(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14.r),
-              ),
-              tileColor: theme.colorScheme.surfaceBright,
-              leading: const Icon(
-                Icons.notifications_outlined,
-                color: AppColors.primary500,
-              ),
-              title: Text(
-                "notifications".tr(),
-                style: theme.textTheme.titleMedium,
-              ),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () {
-                goScreen(context: context, screen: const NotificationScreen());
+            ValueListenableBuilder<int>(
+              valueListenable: unreadNotificationsCount,
+              builder: (context, unreadCount, _) {
+                return ListTile(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14.r),
+                  ),
+                  tileColor: theme.colorScheme.surfaceBright,
+                  leading: const Icon(
+                    Icons.notifications_outlined,
+                    color: AppColors.primary500,
+                  ),
+                  title: Text(
+                    "notifications".tr(),
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (unreadCount > 0)
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.w,
+                            vertical: 2.h,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.error,
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Text(
+                            unreadCount.toString(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                  onTap: () async {
+                    await goScreen(
+                      context: context,
+                      screen: const NotificationScreen(),
+                    );
+                    refreshUnreadNotificationsCount();
+                  },
+                );
               },
             ),
           if (currentUserModel.schoolId != null) SizedBox(height: 12.h),
@@ -345,34 +381,14 @@ class _RoleProfileAndSettingsView extends StatelessWidget {
               ),
             ),
             onTap: () async {
-              final confirmed = await showDialog<bool>(
+              showModalBottomSheet(
                 context: context,
-                builder: (dlgCtx) => AlertDialog(
-                  title: Text(isEn ? 'Logout' : 'خروج از حساب'),
-                  content: Text(
-                    isEn
-                        ? 'Are you sure you want to log out?'
-                        : 'آیا از خروج از حساب کاربری خود اطمینان دارید؟',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dlgCtx, false),
-                      child: Text(isEn ? 'Cancel' : 'انصراف'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(dlgCtx, true),
-                      child: Text(
-                        isEn ? 'Logout' : 'خروج',
-                        style: const TextStyle(color: AppColors.error),
-                      ),
-                    ),
-                  ],
-                ),
+                backgroundColor: Colors.transparent,
+                isScrollControlled: true,
+                builder: (context) {
+                  return const LogoutDialog();
+                },
               );
-
-              if (confirmed == true && context.mounted) {
-                context.read<AuthBloc>().add(LogoutEvent());
-              }
             },
           ),
         ],
